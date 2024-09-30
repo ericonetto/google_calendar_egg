@@ -1,0 +1,10 @@
+config.json
+*.csv
+*.log
+__pycache__/
+venv/
+secrets/*
+.vscode
+testdata/*
+.DS_Store
+*/secrets/*
