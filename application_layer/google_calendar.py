@@ -82,7 +82,7 @@ def request_authorization(apify_app):
                     return apify_app.redirect(authorization_url + "&redirect_uri=http%3A%2F%2Flocalhost%3A9000%2Fgoogle_calendar%2Fauthorize")
                 
             else:
-                return "Error, no client_secret_file_name! POST a Google secrete file in the parameter 'file' on /client_secret endpoint"
+                return "Error, no client_secret_file_name! POST a Google secret file in the parameter 'file' on /client_secret endpoint"
 
                 
 
@@ -94,7 +94,9 @@ def client_secret(apify_request):
             config = json.load(f)
         if "client_secret_file_name" in config:
             client_secret_file_name = config["client_secret_file_name"]
-            return {"client_secret_file_name" :client_secret_file_name}
+            return {"client_secret_file_name" : True}
+    else:
+        return {"client_secret_file_name" : False, "message": "no config made! POST a Google secret file in the parameter 'file' on /client_secret endpoint"}
 
     if apify_request.method == 'POST':   
         f = apify_request.files['file'] 
@@ -107,7 +109,7 @@ def client_secret(apify_request):
         with open(config_file, 'w') as f:
             json.dump(config, f)
 
-        return {"success": True, "client_secret_file_name" :client_secret_file_name}
+        return {"success": True, "client_secret_file_name" :True}
 
 
 def authorize(apify_request):
@@ -119,7 +121,7 @@ def authorize(apify_request):
             client_secret_file_name = config["client_secret_file_name"]
 
     if not client_secret_file_name:
-        return "Error, no client_secret_file_name! POST a Google secrete file in the parameter 'file' on /client_secret endpoint"
+        return "Error, no client_secret_file_name! POST a Google secret file in the parameter 'file' on /client_secret endpoint"
 
     flow = InstalledAppFlow.from_client_secrets_file(client_secret_file_name, scopes = SCOPES)
     flow.redirect_uri =  apify_request.url_root + "google_calendar/authorize"
