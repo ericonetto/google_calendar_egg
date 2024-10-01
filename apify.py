@@ -259,7 +259,9 @@ def documentation():
                     if not param in ["apify_app", "apify_request"]:
                         endpoint_description["body"][param] = "value"
 
-
+                if endpoint_description["body"] == {}:
+                    del endpoint_description["body"]
+                    
             if module_func.__doc__:
                 endpoint_description["doc"] = module_func.__doc__
 
@@ -276,4 +278,5 @@ absolute_root_path = str(Path(root_folder).absolute())
 os.chdir(absolute_root_path)
 # Run the app
 if __name__ == "__main__":
+    subprocess.Popen(['python', '/Users/ericonetto/Documents/DonosBackup/eggpy/google_calendar_egg/gradio_interface.py', "http://" + '0.0.0.0:' + str(port)])
     apify_app.run(host='0.0.0.0', debug=debug_mode, use_reloader=False, port=port)

@@ -87,7 +87,7 @@ def request_authorization(apify_app):
                 
 
 
-def client_secret(apify_request): 
+def client_secret(apify_request, file): 
 
     if os.path.exists(config_file):
         with open(config_file) as f:
