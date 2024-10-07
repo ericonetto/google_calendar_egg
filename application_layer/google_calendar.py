@@ -142,10 +142,62 @@ def authorize(apify_request):
         return "Error"
 
 
+# Function to create an event on Google Calendar
+def create_event(start_date, end_date):
+    if os.path.exists(token_file):
+        with open(token_file, 'r') as json_file:
+            creds_json = json.load(json_file)
+
+        if "token" in creds_json:
+            creds = Credentials.from_authorized_user_file(token_file, SCOPES)
+            service = build('calendar', 'v3', credentials=creds)
+            
+            event = {
+                'summary': 'New Event',
+                'start': {
+                    'dateTime': start_date + 'T00:00:00',
+                    'timeZone': 'Europe/Paris',
+                },
+                'end': {
+                    'dateTime': end_date + 'T23:59:59',
+                    'timeZone': 'Europe/Paris',
+                },
+            }
+            
+            # Insert the event into the user's calendar
+            created_event = service.events().insert(calendarId='primary', body=event).execute()
+            return f"Event created: {created_event.get('htmlLink')}"
+        else:
+            return "Error, no token found in authorization! GET A authorization from /request_authorization endpoint"
+    else:
+        return "Error, not authrorized! GET A authorization from /request_authorization endpoint"
 
 
+# Function to delete an event from Google Calendar
+def delete_event(event_id):
+    if os.path.exists(token_file):
+        with open(token_file, 'r') as json_file:
+            creds_json = json.load(json_file)
 
-def get_upcoming_events():
+        if "token" in creds_json:
+            creds = Credentials.from_authorized_user_file(token_file, SCOPES)
+
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    creds.refresh(Request())
+                service = build('calendar', 'v3', credentials=creds)
+
+                try:
+                    service.events().delete(calendarId='primary', eventId=event_id).execute()
+                    return f"Event with ID '{event_id}' deleted successfully."
+                except Exception as e:
+                    return f"An error occurred: {str(e)}"
+        else:
+            return "Error, no token found in authorization! GET A authorization from /request_authorization endpoint"
+    else:
+        return "Error, not authrorized! GET A authorization from /request_authorization endpoint"
+
+def get_upcoming_events(upcoming_days=1):
 
     if os.path.exists(token_file):
         with open(token_file, 'r') as json_file:
@@ -163,7 +215,7 @@ def get_upcoming_events():
             
             # Convert to the correct format
             now = datetime.datetime.now(datetime.timezone.utc).isoformat()  # 'Z' will automatically be appended
-            end_of_day = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=4)).isoformat()
+            end_of_day = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=int(upcoming_days))).isoformat()
 
 
             # Call Google Calendar API to get today's events
@@ -172,4 +224,8 @@ def get_upcoming_events():
             ).execute()
             
             return events_result.get('items', [])
+        else:
+            return "Error, no token found in authorization! GET A authorization from /request_authorization endpoint"
+    else:
+        return "Error, not authrorized! GET A authorization from /request_authorization endpoint"
                 
