@@ -1,5 +1,7 @@
 import requests
 import ipaddress
+import os
+import json
 
 # Fetch the IP ranges from Atlassian
 def get_atlassian_ip_ranges():
@@ -19,13 +21,19 @@ def get_atlassian_ip_ranges():
             networks.append(ipaddress.ip_network(network))
     return networks
 
-def get_ip_ranges(ip_ranges):
-    networks = []
-    for item in ip_ranges:
-        network = item.get("cidr")
-        if network:
-            networks.append(ipaddress.ip_network(network))
-    return networks
+def get_ip_ranges(accepted_ip_ranges_file):
+    if os.path.exists(accepted_ip_ranges_file):
+        with open(accepted_ip_ranges_file) as f:
+            config = json.load(f)
+            if "accepted_ip_ranges" in config:
+                accepted_ip_ranges = config["accepted_ip_ranges"]
+                networks = []
+                for item in accepted_ip_ranges:
+                    network = item.get("cidr")
+                    if network:
+                        networks.append(ipaddress.ip_network(network))
+                return networks
+    return []
 
 
 

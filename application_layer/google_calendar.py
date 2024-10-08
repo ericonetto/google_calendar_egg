@@ -46,17 +46,28 @@ Path(secrets_folder).mkdir(parents=True, exist_ok=True)
 
 
 token_file = os.path.join(secrets_folder, "token.json")
-config_file = os.path.join(secrets_folder, "config.json")
+config_file = os.path.join(secrets_folder, "secret_file_path.json")
+accepted_ip_ranges_file = os.path.join(secrets_folder, "accepted_ip_ranges_file.json")
+#accepted_ip_ranges_file.json example
+"""
+{
+    "accepted_ip_ranges": [{"cidr": "123.456.789.123"}, {"cidr": "198.189.160.130"}]
+}
+"""
 
-local_ips = get_ip_ranges([{"cidr": "127.0.0.1"}, {"cidr": "37.71.191.130"}, {"cidr": "35.180.160.130"}] )
+local_ips = get_ip_ranges(accepted_ip_ranges_file)
 authorized_ip_ranges = get_atlassian_ip_ranges() + local_ips
 
 # Function to get current events from Google Calendar
 def request_authorization(apify_request, apify_app):
     # Get the IP address from the request
+    
     incoming_ip = apify_request.headers.get('cf-connecting-ip')
-    if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
-        return "Access denied.", 403
+    if incoming_ip ==None:
+        incoming_ip =  apify_request.remote_addr
+    if incoming_ip !=None:
+        if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
+            return "Access denied.", 403
 
     creds = None
     # Load saved credentials from token.json
@@ -90,7 +101,7 @@ def request_authorization(apify_request, apify_app):
                         prompt='consent')
                     
 
-                    return apify_app.redirect(authorization_url + "&redirect_uri=http%3A%2F%2Flocalhost%3A9000%2Fgoogle_calendar%2Fauthorize")
+                    return apify_app.redirect(authorization_url + f"&redirect_uri=http%3A%2F%2Flocalhost%3A{apify_request.environ.get('SERVER_PORT')}%2Fgoogle_calendar%2Fauthorize")
                 
             else:
                 return "Error, no client_secret_file_name! POST a Google secret file in the parameter 'file' on /client_secret endpoint"
@@ -100,6 +111,8 @@ def client_secret(apify_request):
 
     # Get the IP address from the request
     incoming_ip = apify_request.headers.get('cf-connecting-ip')
+    if incoming_ip ==None:
+        incoming_ip =  apify_request.remote_addr
     if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
         return "Access denied.", 403
 
@@ -128,9 +141,10 @@ def client_secret(apify_request):
 def authorize(apify_request):
     # Get the IP address from the request
     incoming_ip = apify_request.headers.get('cf-connecting-ip')
-    if incoming_ip != None:
-        if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
-            return "Access denied.", 403
+    if incoming_ip ==None:
+        incoming_ip =  apify_request.remote_addr
+    if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
+        return "Access denied.", 403
 
 
     client_secret_file_name = None
@@ -166,6 +180,8 @@ def authorize(apify_request):
 def create_event(apify_request, event_name, start_date, end_date):
     # Get the IP address from the request
     incoming_ip = apify_request.headers.get('cf-connecting-ip')
+    if incoming_ip ==None:
+        incoming_ip =  apify_request.remote_addr
     if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
         return "Access denied.", 403
 
@@ -203,6 +219,8 @@ def create_event(apify_request, event_name, start_date, end_date):
 def delete_event(apify_request, event_id):
     # Get the IP address from the request
     incoming_ip = apify_request.headers.get('cf-connecting-ip')
+    if incoming_ip ==None:
+        incoming_ip =  apify_request.remote_addr
     if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
         return "Access denied.", 403
 
@@ -232,6 +250,7 @@ def delete_event(apify_request, event_id):
 def get_upcoming_events(apify_request, upcoming_days=1):
     # Get the IP address from the request
     incoming_ip = apify_request.headers.get('cf-connecting-ip')
+    
     if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
         return "Access denied.", 403
     
