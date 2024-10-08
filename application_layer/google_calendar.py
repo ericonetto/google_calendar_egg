@@ -6,9 +6,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import json
 from pathlib import Path
+from application_layer.helper import is_ip_in_authorized_ranges, get_atlassian_ip_ranges, get_ip_ranges
+
+
 
 # Scopes for Google Calendar API
-SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+SCOPES = ['https://www.googleapis.com/auth/calendar.events.owned']
 
 
 """
@@ -45,8 +48,16 @@ Path(secrets_folder).mkdir(parents=True, exist_ok=True)
 token_file = os.path.join(secrets_folder, "token.json")
 config_file = os.path.join(secrets_folder, "config.json")
 
+local_ips = get_ip_ranges([{"cidr": "127.0.0.1"}, {"cidr": "37.71.191.130"}, {"cidr": "35.180.160.130"}] )
+authorized_ip_ranges = get_atlassian_ip_ranges() + local_ips
+
 # Function to get current events from Google Calendar
-def request_authorization(apify_app):
+def request_authorization(apify_request, apify_app):
+    # Get the IP address from the request
+    incoming_ip = apify_request.headers.get('cf-connecting-ip')
+    if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
+        return "Access denied.", 403
+
     creds = None
     # Load saved credentials from token.json
     if os.path.exists(token_file):
@@ -84,10 +95,14 @@ def request_authorization(apify_app):
             else:
                 return "Error, no client_secret_file_name! POST a Google secret file in the parameter 'file' on /client_secret endpoint"
 
-                
 
+def client_secret(apify_request): 
 
-def client_secret(apify_request, file): 
+    # Get the IP address from the request
+    incoming_ip = apify_request.headers.get('cf-connecting-ip')
+    if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
+        return "Access denied.", 403
+
 
     if os.path.exists(config_file):
         with open(config_file) as f:
@@ -95,8 +110,6 @@ def client_secret(apify_request, file):
         if "client_secret_file_name" in config:
             client_secret_file_name = config["client_secret_file_name"]
             return {"client_secret_file_name" : True}
-    else:
-        return {"client_secret_file_name" : False, "message": "no config made! POST a Google secret file in the parameter 'file' on /client_secret endpoint"}
 
     if apify_request.method == 'POST':   
         f = apify_request.files['file'] 
@@ -113,6 +126,13 @@ def client_secret(apify_request, file):
 
 
 def authorize(apify_request):
+    # Get the IP address from the request
+    incoming_ip = apify_request.headers.get('cf-connecting-ip')
+    if incoming_ip != None:
+        if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
+            return "Access denied.", 403
+
+
     client_secret_file_name = None
     if os.path.exists(config_file):
         with open(config_file) as f:
@@ -143,7 +163,13 @@ def authorize(apify_request):
 
 
 # Function to create an event on Google Calendar
-def create_event(start_date, end_date):
+def create_event(apify_request, event_name, start_date, end_date):
+    # Get the IP address from the request
+    incoming_ip = apify_request.headers.get('cf-connecting-ip')
+    if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
+        return "Access denied.", 403
+
+
     if os.path.exists(token_file):
         with open(token_file, 'r') as json_file:
             creds_json = json.load(json_file)
@@ -153,7 +179,7 @@ def create_event(start_date, end_date):
             service = build('calendar', 'v3', credentials=creds)
             
             event = {
-                'summary': 'New Event',
+                'summary': event_name,
                 'start': {
                     'dateTime': start_date + 'T00:00:00',
                     'timeZone': 'Europe/Paris',
@@ -174,7 +200,13 @@ def create_event(start_date, end_date):
 
 
 # Function to delete an event from Google Calendar
-def delete_event(event_id):
+def delete_event(apify_request, event_id):
+    # Get the IP address from the request
+    incoming_ip = apify_request.headers.get('cf-connecting-ip')
+    if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
+        return "Access denied.", 403
+
+
     if os.path.exists(token_file):
         with open(token_file, 'r') as json_file:
             creds_json = json.load(json_file)
@@ -197,8 +229,12 @@ def delete_event(event_id):
     else:
         return "Error, not authrorized! GET A authorization from /request_authorization endpoint"
 
-def get_upcoming_events(upcoming_days=1):
-
+def get_upcoming_events(apify_request, upcoming_days=1):
+    # Get the IP address from the request
+    incoming_ip = apify_request.headers.get('cf-connecting-ip')
+    if not is_ip_in_authorized_ranges(incoming_ip, authorized_ip_ranges):
+        return "Access denied.", 403
+    
     if os.path.exists(token_file):
         with open(token_file, 'r') as json_file:
             creds_json = json.load(json_file)

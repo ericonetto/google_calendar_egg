@@ -38,7 +38,7 @@ import types
 
 
 root_folder = os.getenv('PYHON_MODULES_DIRECTORY', 'application_layer')
-ignore_str =  os.getenv('IGNORE', 'venv,__pycache__,secrets')
+ignore_str =  os.getenv('IGNORE', 'venv,__pycache__,secrets,helper')
 ignore_list = [item.strip() for item in ignore_str.split(',')]
 apify_modules_args  = os.getenv('MODULES_ARGS', None)
 debug_mode = os.getenv('DEBUG', "false") == "true"
